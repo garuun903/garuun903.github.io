@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-blue: #0d6efd;
+            --bg-light: #f8f9fa;
+            --card-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --card-shadow-hover: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: #333;
+            padding-bottom: 3rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        .btn-rounded {
+            border-radius: 30px;
+            padding: 0.5rem 1.5rem;
+        }
+
+        .progress {
+            height: 1.5rem;
+            border-radius: 30px;
+        }
+
+        .table-container {
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: var(--card-shadow);
+        }
+
+        .table th {
+            background-color: #fcfcfc;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .status-paid {
+            background-color: #e6fcf5 !important;
+        }
+
+        .status-unpaid {
+            background-color: white;
+        }
+
+        input[type="number"] {
+            border-radius: 8px;
+        }
+
+        .summary-icon {
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+            opacity: 0.8;
+        }
+
+        .navbar {
+            background-color: white !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary-blue);
+        }
+
+        .section-title {
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #444;
+        }
+
+        #resetBtn {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        #resetBtn:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <span class="navbar-brand"><i class="bi bi-wallet2 me-2"></i>LOAN DASHBOARD</span>
+            <div class="d-flex">
+                <button class="btn btn-outline-secondary btn-sm me-2 btn-rounded" id="exportBtn"><i
+                        class="bi bi-download me-1"></i> Export CSV</button>
+                <button class="btn btn-outline-danger btn-sm btn-rounded" id="resetBtn"><i
+                        class="bi bi-arrow-counterclockwise"></i> Reset</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Loan Configuration -->
+        <div class="card mb-4">
+            <div class="card-body p-4">
+                <h5 class="section-title"><i class="bi bi-gear me-2"></i>Loan Configuration</h5>
+                <form id="configForm" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Base Amount ($)</label>
+                        <input type="number" class="form-control" id="baseAmount" value="5000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Annual Interest Rate (%)</label>
+                        <input type="number" class="form-control" id="interestRate" step="0.01" value="5">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Total Amount Due ($)</label>
+                        <input type="number" class="form-control" id="totalDue" value="5250">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Total Months</label>
+                        <input type="number" class="form-control" id="totalMonths" value="12">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Monthly Payment ($)</label>
+                        <input type="number" class="form-control" id="defaultPayment" value="440">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Final Month Payment ($)</label>
+                        <input type="number" class="form-control" id="finalPayment" value="410">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Person A Contrib (%)</label>
+                        <input type="number" class="form-control" id="personAProp" value="50">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Person B Contrib (%)</label>
+                        <input type="number" class="form-control" id="personBProp" value="50">
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row g-4 mb-4" id="summaryCards">
+            <div class="col-md-3">
+                <div class="card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="summary-icon me-3"><i class="bi bi-check-circle-fill"></i></div>
+                        <div>
+                            <div class="small text-muted">Total Paid</div>
+                            <h4 class="mb-0 fw-bold" id="summPaid">$0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="summary-icon me-3"><i class="bi bi-piggy-bank-fill"></i></div>
+                        <div>
+                            <div class="small text-muted">Remaining Balance</div>
+                            <h4 class="mb-0 fw-bold" id="summRemaining">$0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="summary-icon me-3"><i class="bi bi-calendar-event-fill"></i></div>
+                        <div>
+                            <div class="small text-muted">Months Completed</div>
+                            <h4 class="mb-0 fw-bold" id="summMonths">0 / 0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="summary-icon me-3"><i class="bi bi-graph-up-arrow"></i></div>
+                        <div>
+                            <div class="small text-muted">Progress Percentage</div>
+                            <h4 class="mb-0 fw-bold" id="summProgress">0%</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart and Progress Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-8">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="small text-muted fw-bold">LOAN COMPLETION PROGRESS</span>
+                            <span id="progressBarText" class="small text-muted fw-bold">0%</span>
+                        </div>
+                        <div class="progress mb-4">
+                            <div id="loanProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0"
+                                aria-valuemax="100">
+                            </div>
+                        </div>
+                        <h5 class="section-title h6 mb-3">Balance Overview</h5>
+                        <div style="height: 250px;">
+                            <canvas id="balanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body text-center d-flex flex-column justify-content-center">
+                        <h5 class="section-title h6">Payment Status</h5>
+                        <div style="height: 200px;">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Payment Table -->
+        <h5 class="section-title"><i class="bi bi-table me-2"></i>Payment Breakdown</h5>
+        <div class="table-container p-1">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="paymentTable">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Month</th>
+                            <th>Amount</th>
+                            <th>Person A</th>
+                            <th>Person B</th>
+                            <th>Status</th>
+                            <th>Date Paid</th>
+                            <th class="text-end pe-3">Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Dynamic rows go here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let loanState = {
+            config: {
+                baseAmount: 5000,
+                interestRate: 5,
+                totalDue: 5250,
+                totalMonths: 12,
+                defaultPayment: 440,
+                finalPayment: 410,
+                personAProp: 50,
+                personBProp: 50
+            },
+            payments: [] // Array of { paid: boolean, date: string }
+        };
+
+        // DOM Elements
+        // DOM Elements
+        const elements = {
+            baseAmount: document.getElementById('baseAmount'),
+            interestRate: document.getElementById('interestRate'),
+            totalDue: document.getElementById('totalDue'),
+            totalMonths: document.getElementById('totalMonths'),
+            defaultPayment: document.getElementById('defaultPayment'),
+            finalPayment: document.getElementById('finalPayment'),
+            personAProp: document.getElementById('personAProp'),
+            personBProp: document.getElementById('personBProp'),
+            summPaid: document.getElementById('summPaid'),
+            summRemaining: document.getElementById('summRemaining'),
+            summMonths: document.getElementById('summMonths'),
+            summProgress: document.getElementById('summProgress'),
+            loanProgressBar: document.getElementById('loanProgressBar'),
+            progressBarText: document.getElementById('progressBarText'),
+            tableBody: document.getElementById('tableBody'),
+            resetBtn: document.getElementById('resetBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            balanceChart: document.getElementById('balanceChart'),
+            statusChart: document.getElementById('statusChart')
+        };
+
+        let balanceChart = null;
+        let statusChart = null;
+
+        // Initialize
+        function init() {
+            loadFromLocalStorage();
+            updateUI();
+            attachEventListeners();
+        }
+
+        function attachEventListeners() {
+            // Form inputs
+            Object.keys(loanState.config).forEach(key => {
+                elements[key].addEventListener('input', (e) => {
+                    loanState.config[key] = parseFloat(e.target.value) || 0;
+                    // If months count changed, resize payments array
+                    if (key === 'totalMonths') {
+                        handleMonthCountChange();
+                    }
+                    updateUI();
+                    saveToLocalStorage();
+                });
+            });
+
+            elements.resetBtn.addEventListener('click', resetAll);
+            elements.exportBtn.addEventListener('click', exportToCSV);
+        }
+
+        function handleMonthCountChange() {
+            const count = loanState.config.totalMonths;
+            while (loanState.payments.length < count) {
+                loanState.payments.push({ paid: false, date: null });
+            }
+            if (loanState.payments.length > count) {
+                loanState.payments = loanState.payments.slice(0, count);
+            }
+        }
+
+        function updateUI() {
+            renderConfiguration();
+            calculateAndRenderSummary();
+            renderTable();
+        }
+
+        function renderConfiguration() {
+            Object.keys(loanState.config).forEach(key => {
+                elements[key].value = loanState.config[key];
+            });
+        }
+
+        function calculateAndRenderSummary() {
+            const totalDue = loanState.config.totalDue;
+            const totalMonths = loanState.config.totalMonths;
+            const defaultPay = loanState.config.defaultPayment;
+            const finalPay = loanState.config.finalPayment;
+
+            let totalPaid = 0;
+            let monthsDone = 0;
+
+            loanState.payments.forEach((p, index) => {
+                if (p.paid) {
+                    const amount = (index === totalMonths - 1) ? finalPay : defaultPay;
+                    totalPaid += amount;
+                    monthsDone++;
+                }
+            });
+
+            const remaining = totalDue - totalPaid;
+            const progress = totalMonths > 0 ? (monthsDone / totalMonths) * 100 : 0;
+
+            elements.summPaid.textContent = `$${totalPaid.toLocaleString()}`;
+            elements.summRemaining.textContent = `$${remaining.toLocaleString()}`;
+            elements.summMonths.textContent = `${monthsDone} / ${totalMonths}`;
+            elements.summProgress.textContent = `${Math.round(progress)}%`;
+
+            elements.loanProgressBar.style.width = `${progress}%`;
+            elements.loanProgressBar.setAttribute('aria-valuenow', progress);
+            elements.progressBarText.textContent = `${Math.round(progress)}%`;
+
+            updateCharts(totalPaid, remaining, monthsDone, totalMonths);
+        }
+
+        function updateCharts(paid, remaining, monthsDone, totalMonths) {
+            const monthsLeft = totalMonths - monthsDone;
+
+            // Balance Distribution Chart (Bar)
+            if (!balanceChart) {
+                const ctx = elements.balanceChart.getContext('2d');
+                balanceChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Total Due', 'Paid', 'Remaining'],
+                        datasets: [{
+                            label: 'Amount ($)',
+                            data: [paid + remaining, paid, remaining],
+                            backgroundColor: ['#e9ecef', '#0d6efd', '#ffc107'],
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            } else {
+                balanceChart.data.datasets[0].data = [paid + remaining, paid, remaining];
+                balanceChart.update();
+            }
+
+            // Status Chart (Doughnut)
+            if (!statusChart) {
+                const ctx = elements.statusChart.getContext('2d');
+                statusChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Paid', 'Unpaid'],
+                        datasets: [{
+                            data: [monthsDone, monthsLeft],
+                            backgroundColor: ['#198754', '#dee2e6'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            } else {
+                statusChart.data.datasets[0].data = [monthsDone, monthsLeft];
+                statusChart.update();
+            }
+        }
+
+        function renderTable() {
+            elements.tableBody.innerHTML = '';
+            const totalMonths = loanState.config.totalMonths;
+            const defaultPay = loanState.config.defaultPayment;
+            const finalPay = loanState.config.finalPayment;
+            const propA = loanState.config.personAProp / 100;
+            const propB = loanState.config.personBProp / 100;
+            const totalDue = loanState.config.totalDue;
+
+            let runningBalance = totalDue;
+
+            for (let i = 0; i < totalMonths; i++) {
+                const amount = (i === totalMonths - 1) ? finalPay : defaultPay;
+                const status = loanState.payments[i] || { paid: false, date: null };
+
+                if (status.paid) {
+                    runningBalance -= amount;
+                }
+
+                const row = document.createElement('tr');
+                if (status.paid) row.classList.add('status-paid');
+
+                row.innerHTML = `
+                <td class="ps-3 fw-medium">Month ${i + 1}</td>
+                <td class="fw-bold">$${amount}</td>
+                <td class="text-muted small">$${(amount * propA).toFixed(2)}</td>
+                <td class="text-muted small">$${(amount * propB).toFixed(2)}</td>
+                <td>
+                    <button class="btn btn-sm ${status.paid ? 'btn-success' : 'btn-outline-secondary'} btn-rounded py-1" onclick="togglePayment(${i})">
+                        ${status.paid ? '<i class="bi bi-check2"></i> Paid' : 'Mark Paid'}
+                    </button>
+                </td>
+                <td class="small text-muted">
+                    ${status.paid ? `<input type="date" class="form-control form-control-sm border-0 bg-transparent p-0" value="${status.date || ''}" onchange="updatePaymentDate(${i}, this.value)">` : '-'}
+                </td>
+                <td class="text-end pe-3 fw-bold ${runningBalance <= 0 ? 'text-success' : ''}">
+                    $${Math.max(0, runningBalance).toLocaleString()}
+                </td>
+            `;
+                elements.tableBody.appendChild(row);
+
+                // Update running balance if UNPAID - to show balance AFTER this month if it WERE paid (optional logic, but prompt says "Remaining Balance After This Month")
+                // Re-reading: "Remaining Balance After This Month". Usually means if it's paid.
+                // If it's NOT paid, the balance is still the old one. Let's stick to real-time status.
+            }
+        }
+
+        window.togglePayment = function (index) {
+            if (!loanState.payments[index]) {
+                loanState.payments[index] = { paid: false, date: null };
+            }
+
+            loanState.payments[index].paid = !loanState.payments[index].paid;
+            // Use ISO format (YYYY-MM-DD) for initial date to work with input type="date"
+            loanState.payments[index].date = loanState.payments[index].paid ? new Date().toISOString().split('T')[0] : null;
+
+            updateUI();
+            saveToLocalStorage();
+        };
+
+        window.updatePaymentDate = function (index, newDate) {
+            if (loanState.payments[index]) {
+                loanState.payments[index].date = newDate;
+                saveToLocalStorage();
+                // Optionally re-render table if you want immediate feedback, 
+                // but since it's just a local input change, it might not be strictly necessary 
+                // unless other parts of UI depend on this specific date string.
+            }
+        };
+
+        function saveToLocalStorage() {
+            localStorage.setItem('loan_dashboard_state', JSON.stringify(loanState));
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('loan_dashboard_state');
+            if (saved) {
+                loanState = JSON.parse(saved);
+            } else {
+                // Initial payment array setup
+                handleMonthCountChange();
+            }
+        }
+
+        function resetAll() {
+            if (confirm('Are you sure you want to reset all data? This will clear all payments and configuration.')) {
+                localStorage.removeItem('loan_dashboard_state');
+                location.reload();
+            }
+        }
+
+        function exportToCSV() {
+            let csv = 'Month,Amount,Person A,Person B,Status,Date Paid,Balance After\n';
+
+            const totalMonths = loanState.config.totalMonths;
+            const defaultPay = loanState.config.defaultPayment;
+            const finalPay = loanState.config.finalPayment;
+            const propA = loanState.config.personAProp / 100;
+            const propB = loanState.config.personBProp / 100;
+            let runningBalance = loanState.config.totalDue;
+
+            for (let i = 0; i < totalMonths; i++) {
+                const amount = (i === totalMonths - 1) ? finalPay : defaultPay;
+                const status = loanState.payments[i] || { paid: false, date: null };
+                if (status.paid) runningBalance -= amount;
+
+                csv += `${i + 1},${amount},${(amount * propA).toFixed(2)},${(amount * propB).toFixed(2)},${status.paid ? 'Paid' : 'Unpaid'},${status.date || '-'},${Math.max(0, runningBalance)}\n`;
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", "loan_payment_data.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Start
+        init();
+
+    </script>
+
+</body>
+
+</html>
